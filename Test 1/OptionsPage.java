@@ -37,7 +37,7 @@ public class OptionsPage {
     private void openChat(boolean isServer) {
         frame.dispose();
         if (isServer) {
-            new ServerChatPage(); // Launch Server Chat Page
+            new ServerGUI(); // Launch Server Chat Page
         } else {
             String ip = JOptionPane.showInputDialog("Enter Server IP for Chat:");
             if (ip != null && !ip.isEmpty()) {

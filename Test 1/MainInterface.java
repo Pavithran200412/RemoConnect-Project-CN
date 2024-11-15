@@ -28,7 +28,7 @@ public class MainInterface {
 
     private void startServer() {
         frame.dispose();
-        new ServerChatPage(); // Open the Server chat interface
+        new ServerGUI(); // Open the Server chat interface
     }
 
     private void startClient() {
