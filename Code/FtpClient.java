@@ -122,14 +122,19 @@ public class FtpClient {
             long totalRead = 0;
             int bytesRead;
 
-            while (totalRead < fileSize && (bytesRead = dataIn.read(buffer, 0, Math.min(buffer.length, (int)(fileSize - totalRead)))) != -1) {
+            while (totalRead < fileSize && (bytesRead = dataIn.read(buffer)) != -1) {
                 fileOut.write(buffer, 0, bytesRead);
                 totalRead += bytesRead;
             }
         }
 
-        textArea.append("File received: " + file.getName() + "\n");
+        if (file.length() == fileSize) {
+            textArea.append("File received successfully: " + file.getName() + "\n");
+        } else {
+            JOptionPane.showMessageDialog(frame, "File transfer incomplete. Expected: " + fileSize + " bytes, but received: " + file.length(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
+
 
     private void disconnectAction() {
         try {
