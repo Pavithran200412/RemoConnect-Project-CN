@@ -1,4 +1,4 @@
-import org.apache.commons.net.ftp.FTP;
+/*import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 
 import javax.swing.*;
@@ -137,4 +137,4 @@ public class ClientFTP {
     public static void main(String[] args) {
         SwingUtilities.invokeLater(ClientFTP::new);
     }
-}
+}*/
