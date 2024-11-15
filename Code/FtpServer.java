@@ -1,45 +1,83 @@
+import javax.swing.*;
+import java.awt.*;
 import java.io.*;
 import java.net.*;
 
 public class FtpServer {
     private static final int PORT = 9002;
-    
+    private JTextArea logArea;
+    private ServerSocket serverSocket;
+
     public static void main(String[] args) {
-        try (ServerSocket serverSocket = new ServerSocket(PORT)) {
-            System.out.println("Server is running and waiting for client connections...");
+        SwingUtilities.invokeLater(() -> {
+            FtpServer server = new FtpServer();
+            server.createAndShowGUI();
+            new Thread(server::startServer).start();
+        });
+    }
+
+    private void createAndShowGUI() {
+        JFrame frame = new JFrame("FTP Server");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        logArea = new JTextArea(20, 50);
+        logArea.setEditable(false);
+        JScrollPane scrollPane = new JScrollPane(logArea);
+
+        JButton stopButton = new JButton("Stop Server");
+        stopButton.addActionListener(e -> stopServer());
+
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.add(scrollPane, BorderLayout.CENTER);
+        panel.add(stopButton, BorderLayout.SOUTH);
+
+        frame.add(panel);
+        frame.pack();
+        frame.setVisible(true);
+    }
+
+    private void logMessage(String message) {
+        SwingUtilities.invokeLater(() -> logArea.append(message + "\n"));
+    }
+
+    private void startServer() {
+        try {
+            serverSocket = new ServerSocket(PORT);
+            logMessage("Server started on port " + PORT);
 
             while (true) {
                 Socket clientSocket = serverSocket.accept();
-                System.out.println("Client connected: " + clientSocket.getInetAddress());
+                logMessage("Client connected: " + clientSocket.getInetAddress());
 
-                DataInputStream dataIn = new DataInputStream(clientSocket.getInputStream());
-                DataOutputStream dataOut = new DataOutputStream(clientSocket.getOutputStream());
-
-                // Handle client requests continuously
-                while (true) {
-                    String command = dataIn.readUTF();
-                    if ("SEND".equals(command)) {
-                        receiveFile(dataIn, dataOut);
-                    } else if ("RECEIVE".equals(command)) {
-                        sendFile(dataIn, dataOut);
-                    } else {
-                        break; // Disconnect if command is unknown
-                    }
-                }
-
-                // Close resources after finishing with the client
-                dataIn.close();
-                dataOut.close();
-                clientSocket.close();
-                System.out.println("Client disconnected.");
+                new Thread(() -> handleClient(clientSocket)).start();
             }
         } catch (IOException e) {
-            System.err.println("Server error: " + e.getMessage());
-            e.printStackTrace();
+            logMessage("Server error: " + e.getMessage());
         }
     }
 
-    private static void receiveFile(DataInputStream dataIn, DataOutputStream dataOut) {
+    private void handleClient(Socket clientSocket) {
+        try (DataInputStream dataIn = new DataInputStream(clientSocket.getInputStream());
+             DataOutputStream dataOut = new DataOutputStream(clientSocket.getOutputStream())) {
+
+            while (true) {
+                String command = dataIn.readUTF();
+                if ("SEND".equals(command)) {
+                    receiveFile(dataIn, dataOut);
+                } else if ("RECEIVE".equals(command)) {
+                    sendFile(dataIn, dataOut);
+                } else {
+                    break;
+                }
+            }
+
+            logMessage("Client disconnected: " + clientSocket.getInetAddress());
+        } catch (IOException e) {
+            logMessage("Error handling client: " + e.getMessage());
+        }
+    }
+
+    private void receiveFile(DataInputStream dataIn, DataOutputStream dataOut) {
         try {
             String fileName = dataIn.readUTF();
             long fileSize = dataIn.readLong();
@@ -49,13 +87,14 @@ public class FtpServer {
                 byte[] buffer = new byte[4096];
                 long totalRead = 0;
                 int bytesRead;
-                while (totalRead < fileSize && (bytesRead = dataIn.read(buffer, 0, Math.min(buffer.length, (int)(fileSize - totalRead)))) != -1) {
+                while (totalRead < fileSize &&
+                        (bytesRead = dataIn.read(buffer, 0, Math.min(buffer.length, (int) (fileSize - totalRead)))) != -1) {
                     fileOut.write(buffer, 0, bytesRead);
                     totalRead += bytesRead;
                 }
             }
 
-            System.out.println("File received: " + fileName);
+            logMessage("File received: " + fileName);
             dataOut.writeUTF("File received: " + fileName);
         } catch (IOException e) {
             try {
@@ -63,18 +102,18 @@ public class FtpServer {
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
-            System.err.println("Error receiving file: " + e.getMessage());
+            logMessage("Error receiving file: " + e.getMessage());
         }
     }
 
-    private static void sendFile(DataInputStream dataIn, DataOutputStream dataOut) {
+    private void sendFile(DataInputStream dataIn, DataOutputStream dataOut) {
         try {
             String fileName = dataIn.readUTF();
             File file = new File(fileName);
 
             if (!file.exists()) {
                 dataOut.writeUTF("ERROR");
-                System.err.println("File not found on server: " + fileName);
+                logMessage("File not found on server: " + fileName);
                 return;
             }
 
@@ -89,10 +128,21 @@ public class FtpServer {
                 }
             }
 
-            System.out.println("File sent: " + file.getName());
+            logMessage("File sent: " + file.getName());
             dataOut.writeUTF("File sent: " + file.getName());
         } catch (IOException e) {
-            System.err.println("Error sending file: " + e.getMessage());
+            logMessage("Error sending file: " + e.getMessage());
+        }
+    }
+
+    private void stopServer() {
+        try {
+            if (serverSocket != null && !serverSocket.isClosed()) {
+                serverSocket.close();
+                logMessage("Server stopped.");
+            }
+        } catch (IOException e) {
+            logMessage("Error stopping server: " + e.getMessage());
         }
     }
 }
