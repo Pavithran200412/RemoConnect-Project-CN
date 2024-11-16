@@ -1,12 +1,12 @@
-import java.io.*;
-import java.net.*;
-import javax.swing.*;
 import java.awt.*;
 import java.awt.image.*;
+import java.io.*;
+import java.net.*;
 import javax.imageio.*;
+import javax.swing.*;
 
 public class ScreenSharingClient {
-    private static final int PORT = 9002;
+    private static final int PORT = 4444;
     private Socket socket;
     private DataInputStream dataIn;
     private JFrame frame;
