@@ -2,97 +2,72 @@ import java.io.*;
 import java.net.*;
 
 public class FtpServer {
-    private static final int PORT = 9002;
-    
-    public static void main(String[] args) {
+    private static final int PORT = 9003;
+
+    public FtpServer() {
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
-            System.out.println("Server is running and waiting for client connections...");
+            System.out.println("File Transfer Server started. Waiting for connections...");
 
             while (true) {
-                Socket clientSocket = serverSocket.accept();
-                System.out.println("Client connected: " + clientSocket.getInetAddress());
+                try (Socket clientSocket = serverSocket.accept();
+                     DataInputStream dataIn = new DataInputStream(clientSocket.getInputStream());
+                     DataOutputStream dataOut = new DataOutputStream(clientSocket.getOutputStream())) {
 
-                DataInputStream dataIn = new DataInputStream(clientSocket.getInputStream());
-                DataOutputStream dataOut = new DataOutputStream(clientSocket.getOutputStream());
-
-                // Handle client requests continuously
-                while (true) {
                     String command = dataIn.readUTF();
+
                     if ("SEND".equals(command)) {
-                        receiveFile(dataIn, dataOut);
+                        receiveFile(dataIn);
                     } else if ("RECEIVE".equals(command)) {
-                        sendFile(dataIn, dataOut);
-                    } else {
-                        break; // Disconnect if command is unknown
+                        String fileName = dataIn.readUTF();
+                        sendFile(fileName, dataOut);
                     }
                 }
-
-                // Close resources after finishing with the client
-                dataIn.close();
-                dataOut.close();
-                clientSocket.close();
-                System.out.println("Client disconnected.");
             }
         } catch (IOException e) {
-            System.err.println("Server error: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
-    private static void receiveFile(DataInputStream dataIn, DataOutputStream dataOut) {
-        try {
-            String fileName = dataIn.readUTF();
-            long fileSize = dataIn.readLong();
-            File file = new File("received_" + fileName);
+    private void receiveFile(DataInputStream dataIn) throws IOException {
+        String fileName = dataIn.readUTF();
+        long fileSize = dataIn.readLong();
+        File file = new File("Server_" + fileName);
 
-            try (FileOutputStream fileOut = new FileOutputStream(file)) {
-                byte[] buffer = new byte[4096];
-                long totalRead = 0;
-                int bytesRead;
-                while (totalRead < fileSize && (bytesRead = dataIn.read(buffer, 0, Math.min(buffer.length, (int)(fileSize - totalRead)))) != -1) {
-                    fileOut.write(buffer, 0, bytesRead);
-                    totalRead += bytesRead;
-                }
-            }
+        try (FileOutputStream fileOut = new FileOutputStream(file)) {
+            byte[] buffer = new byte[4096];
+            long bytesRead = 0;
 
-            System.out.println("File received: " + fileName);
-            dataOut.writeUTF("File received: " + fileName);
-        } catch (IOException e) {
-            try {
-                dataOut.writeUTF("ERROR");
-            } catch (IOException ex) {
-                ex.printStackTrace();
+            while (bytesRead < fileSize) {
+                int read = dataIn.read(buffer);
+                fileOut.write(buffer, 0, read);
+                bytesRead += read;
             }
-            System.err.println("Error receiving file: " + e.getMessage());
         }
+
+        System.out.println("File received: " + file.getName());
     }
 
-    private static void sendFile(DataInputStream dataIn, DataOutputStream dataOut) {
-        try {
-            String fileName = dataIn.readUTF();
-            File file = new File(fileName);
+    private void sendFile(String fileName, DataOutputStream dataOut) throws IOException {
+        File file = new File(fileName);
 
-            if (!file.exists()) {
-                dataOut.writeUTF("ERROR");
-                System.err.println("File not found on server: " + fileName);
-                return;
-            }
-
-            dataOut.writeUTF(file.getName());
-            dataOut.writeLong(file.length());
-
-            try (FileInputStream fileIn = new FileInputStream(file)) {
-                byte[] buffer = new byte[4096];
-                int bytesRead;
-                while ((bytesRead = fileIn.read(buffer)) != -1) {
-                    dataOut.write(buffer, 0, bytesRead);
-                }
-            }
-
-            System.out.println("File sent: " + file.getName());
-            dataOut.writeUTF("File sent: " + file.getName());
-        } catch (IOException e) {
-            System.err.println("Error sending file: " + e.getMessage());
+        if (!file.exists()) {
+            dataOut.writeUTF("ERROR");
+            return;
         }
+
+        dataOut.writeUTF("OK");
+        dataOut.writeUTF(file.getName());
+        dataOut.writeLong(file.length());
+
+        try (FileInputStream fileIn = new FileInputStream(file)) {
+            byte[] buffer = new byte[4096];
+            int read;
+
+            while ((read = fileIn.read(buffer)) != -1) {
+                dataOut.write(buffer, 0, read);
+            }
+        }
+
+        System.out.println("File sent: " + file.getName());
     }
 }

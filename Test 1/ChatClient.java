@@ -1,9 +1,9 @@
+import javax.swing.*;
 import java.awt.*;
 import java.io.*;
 import java.net.*;
-import javax.swing.*;
 
-public class ClientChatPage {
+public class ChatClient {
     private JFrame frame;
     private JTextArea chatArea;
     private JTextField messageField;
@@ -13,7 +13,7 @@ public class ClientChatPage {
     private PrintWriter out;
     private BufferedReader in;
 
-    public ClientChatPage(String serverIp) {
+    public ChatClient(String serverIp) throws IOException {
         setupGUI();
         connectToServer(serverIp);
     }
@@ -39,25 +39,21 @@ public class ClientChatPage {
         frame.setVisible(true);
     }
 
-    private void connectToServer(String serverIp) {
+    private void connectToServer(String serverIp) throws IOException {
+        socket = new Socket(serverIp, 9000);
+        chatArea.append("Connected to server.\n");
+
+        out = new PrintWriter(socket.getOutputStream(), true);
+        in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
         new Thread(() -> {
             try {
-                socket = new Socket(serverIp, 12345);
-                chatArea.append("Connected to server.\n");
-
-                // Redirect to Options Page
-                frame.dispose();
-                new OptionsPage(false);
-
-                out = new PrintWriter(socket.getOutputStream(), true);
-                in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
                 String message;
                 while ((message = in.readLine()) != null) {
                     chatArea.append("Server: " + message + "\n");
                 }
             } catch (IOException e) {
-                chatArea.append("Error: Unable to connect to server. " + e.getMessage() + "\n");
+                chatArea.append("Error: " + e.getMessage() + "\n");
             }
         }).start();
     }
