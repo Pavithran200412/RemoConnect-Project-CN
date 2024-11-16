@@ -5,7 +5,7 @@ import java.net.*;
 import javax.imageio.*;
 
 public class ScreenSharingServer {
-    private static final int PORT = 2212;
+    private static final int PORT = 4444;
     private ServerSocket serverSocket;
     private Socket socket;
     private DataOutputStream dataOut;

@@ -3,7 +3,7 @@ import java.net.*;
 import javax.swing.*;
 
 public class FtpClient {
-    private static final int PORT = 3107;
+    private static final int PORT = 3333;
 
     public FtpClient() {
         try {
