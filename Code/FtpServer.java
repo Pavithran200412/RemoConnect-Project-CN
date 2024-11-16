@@ -2,7 +2,7 @@ import java.io.*;
 import java.net.*;
 
 public class FtpServer {
-    private static final int PORT = 3333;
+    private static final int PORT = 3107;
 
     public FtpServer() {
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
