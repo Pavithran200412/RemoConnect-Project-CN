@@ -6,7 +6,7 @@ import javax.imageio.*;
 import javax.swing.*;
 
 public class ScreenSharingClient {
-    private static final int PORT = 9005;
+    private static final int PORT = 4444;
     private Socket socket;
     private DataInputStream dataIn;
     private JFrame frame;
